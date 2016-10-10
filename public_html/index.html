@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset=utf-8>
+        <title>Couch Space</title>
+        <style>
+            body { margin: 0; }
+            canvas { width: 100%; height: 100% }
+        </style>
+        <script src="js/three.js"></script>
+        <script src="js/OBJLoader.js"></script>
+        <script src="js/MTLLoader.js"></script>
+        <script src='js/THREEx.KeyboardState.js'></script>
+        <script src="js/physics.js"></script>
+    </head>
+    <body>
+        <script>
+            var shipFileName = "envos/Envos Battlecruiser.obj";
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            var ambient = new THREE.AmbientLight(0x444444);
+            scene.add(ambient);
+
+            var directionalLight = new THREE.DirectionalLight(0xffeedd);
+            directionalLight.position.set(0, 0, 1).normalize();
+            scene.add(directionalLight);
+
+            var renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            camera.position.z = 300;
+            camera.position.y = 100;
+
+            var shipObj;
+
+            var keyboard = new THREEx.KeyboardState();
+            var world = new vphy.World();
+            world.start(Date.now() / 1000);
+            world.add(new vphy.LinearAccelerator({
+                x: 0,
+                y: -9.8,
+                z: 0
+            }));
+
+            var mtlLoader = new THREE.MTLLoader();
+            mtlLoader.setPath('envos/');
+            mtlLoader.load('Envos_Battlecruiser.mtl', function (materials) {
+                materials.preload();
+                var objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+                objLoader.setPath('envos/');
+                objLoader.load('Envos Battlecruiser.obj', function (object) {
+                    shipObj = object;
+                    shipObj.position.y = -50;
+                    scene.add(object);
+                    render();
+                });
+            });
+
+            var render = function () {
+                requestAnimationFrame(render);
+                var timeStep = 1 / 180;
+                world.step(timeStep, Date.now() / 1000);
+
+                var player = new vphy.Sphere({radius: 20});
+                world.add({
+                    type: vphy.types.ACCELERATOR, // let the lib know it is an accelerator
+                    perform: function (bodies) {      // bodies is the array of all vphy.Body
+                        if (keyboard.pressed('D'))
+                            player.accelerate(1, 0, 0);
+                        if (keyboard.pressed('A'))
+                            player.accelerate(-1, 0, 0);
+                        if (keyboard.pressed('W'))
+                            player.accelerate(0, 0, 1);
+                        if (keyboard.pressed('S'))
+                            player.accelerate(0, 0, -1);
+                    }
+                });
+                renderer.render(scene, camera);
+            };
+        </script>
+    </body>
+</html>
